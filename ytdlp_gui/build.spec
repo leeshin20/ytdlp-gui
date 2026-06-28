@@ -14,16 +14,21 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
+    exclude_binaries=True,
     name='ytdlp-gui',
     debug=False,
     strip=False,
     upx=True,
     console=False,
 )
-app = BUNDLE(
+coll = COLLECT(
     exe,
+    a.binaries,
+    a.datas,
+    name='ytdlp-gui',
+)
+app = BUNDLE(
+    coll,
     name='ytdlp-gui.app',
     bundle_identifier='com.ytdlp.gui',
 )

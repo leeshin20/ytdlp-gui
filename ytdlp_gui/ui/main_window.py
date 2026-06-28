@@ -68,7 +68,7 @@ class MainWindow(ctk.CTk):
 
         # Progress section
         self._progress = ProgressSection(self)
-        self._progress.pack(fill="x", **pad, pady=(0, 12))
+        self._progress.pack(fill="x", padx=16, pady=(0, 12))
 
     # ---- event handlers ----
 

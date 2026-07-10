@@ -1,4 +1,8 @@
 import threading
+import shutil
+import sys
+from pathlib import Path
+
 import yt_dlp
 
 QUALITY_FILTER = {
@@ -25,6 +29,44 @@ def build_format_string(fmt: str, quality: str) -> str:
 
 class _Cancelled(Exception):
     pass
+
+
+def get_ffmpeg_location() -> str | None:
+    """Return the bundled ffmpeg path when running from a PyInstaller app."""
+    if getattr(sys, "frozen", False):
+        roots = [Path(getattr(sys, "_MEIPASS", ""))]
+        executable = getattr(sys, "executable", "")
+        if executable:
+            roots.append(Path(executable).resolve().parent.parent / "Frameworks")
+        for root in roots:
+            candidate = root / "ffmpeg"
+            if candidate.is_file():
+                return str(candidate)
+        return None
+    return shutil.which("ffmpeg")
+
+
+def build_ydl_options(
+    fmt: str,
+    quality: str,
+    save_folder: str,
+    progress_hook,
+    ffmpeg_location: str | None,
+) -> dict:
+    options = {
+        "format": build_format_string(fmt, quality),
+        "outtmpl": f"{save_folder}/%(title)s.%(ext)s",
+        "progress_hooks": [progress_hook],
+        "quiet": True,
+        "no_warnings": True,
+    }
+    if ffmpeg_location:
+        options["ffmpeg_location"] = ffmpeg_location
+    if fmt == "mp3":
+        options["postprocessors"] = [
+            {"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}
+        ]
+    return options
 
 
 class Downloader:
@@ -54,17 +96,11 @@ class Downloader:
         self._cancelled = True
 
     def _run(self, url, fmt, quality, save_folder, on_progress, on_status, on_complete):
-        ydl_opts = {
-            "format": build_format_string(fmt, quality),
-            "outtmpl": f"{save_folder}/%(title)s.%(ext)s",
-            "progress_hooks": [self._make_hook(on_progress, on_status)],
-            "quiet": True,
-            "no_warnings": True,
-        }
-        if fmt == "mp3":
-            ydl_opts["postprocessors"] = [
-                {"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}
-            ]
+        ydl_opts = build_ydl_options(
+            fmt, quality, save_folder,
+            self._make_hook(on_progress, on_status),
+            get_ffmpeg_location(),
+        )
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])

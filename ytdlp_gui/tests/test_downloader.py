@@ -38,6 +38,18 @@ def test_frozen_app_uses_bundled_ffmpeg(monkeypatch, tmp_path):
     ffmpeg.chmod(0o755)
     monkeypatch.setattr(downloader.sys, "frozen", True, raising=False)
     monkeypatch.setattr(downloader.sys, "_MEIPASS", str(tmp_path), raising=False)
+    monkeypatch.setattr(downloader.sys, "platform", "darwin")
+
+    assert downloader.get_ffmpeg_location() == str(ffmpeg)
+
+
+def test_frozen_windows_app_uses_bundled_ffmpeg(monkeypatch, tmp_path):
+    ffmpeg = tmp_path / "ffmpeg.exe"
+    ffmpeg.write_bytes(b"binary")
+    ffmpeg.chmod(0o755)
+    monkeypatch.setattr(downloader.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(downloader.sys, "_MEIPASS", str(tmp_path), raising=False)
+    monkeypatch.setattr(downloader.sys, "platform", "win32")
 
     assert downloader.get_ffmpeg_location() == str(ffmpeg)
 

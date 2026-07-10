@@ -50,7 +50,7 @@ for text in 'Apple Silicon' '우클릭' '열기'; do
   }
 done
 
-grep -q "('/opt/homebrew/bin/ffprobe', '.')" "$repo_root/build.spec" || {
+grep -q "(FFPROBE, '.')" "$repo_root/build.spec" || {
   echo 'build.spec must bundle ffprobe alongside ffmpeg' >&2
   exit 1
 }

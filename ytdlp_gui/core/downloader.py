@@ -34,12 +34,13 @@ class _Cancelled(Exception):
 def get_ffmpeg_location() -> str | None:
     """Return the bundled ffmpeg path when running from a PyInstaller app."""
     if getattr(sys, "frozen", False):
+        executable_name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
         roots = [Path(getattr(sys, "_MEIPASS", ""))]
         executable = getattr(sys, "executable", "")
-        if executable:
+        if executable and sys.platform != "win32":
             roots.append(Path(executable).resolve().parent.parent / "Frameworks")
         for root in roots:
-            candidate = root / "ffmpeg"
+            candidate = root / executable_name
             if candidate.is_file():
                 return str(candidate)
         return None

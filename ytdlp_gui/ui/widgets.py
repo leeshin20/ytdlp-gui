@@ -48,10 +48,12 @@ class QualitySelector(ctk.CTkFrame):
 class ProgressSection(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
+        self.configure(width=400, height=44)
+        self.pack_propagate(False)
         self._bar = ctk.CTkProgressBar(self, width=400)
         self._bar.set(0)
         self._bar.pack(fill="x", pady=(0, 4))
-        self._label = ctk.CTkLabel(self, text="대기 중", anchor="w")
+        self._label = ctk.CTkLabel(self, text="대기 중", anchor="w", width=400)
         self._label.pack(fill="x")
 
     def set_progress(self, value: float):

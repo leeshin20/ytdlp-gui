@@ -64,3 +64,26 @@ def test_ydl_options_pass_bundled_ffmpeg_location():
     )
 
     assert options["ffmpeg_location"] == "/Applications/ytdlp-gui.app/Contents/Frameworks/ffmpeg"
+
+
+def test_playlist_option_is_explicit():
+    hook = lambda _download: None
+
+    playlist_options = downloader.build_ydl_options(
+        "mp4", "best", "/tmp/downloads", hook, None, playlist=True
+    )
+    single_video_options = downloader.build_ydl_options(
+        "mp4", "best", "/tmp/downloads", hook, None, playlist=False
+    )
+
+    assert playlist_options["noplaylist"] is False
+    assert single_video_options["noplaylist"] is True
+
+
+def test_long_filename_is_truncated_but_extension_is_kept():
+    filename = "a" * 100 + ".mp4"
+
+    result = downloader.shorten_filename(filename, max_length=50)
+
+    assert len(result) == 50
+    assert result.endswith("...mp4")

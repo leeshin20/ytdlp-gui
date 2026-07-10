@@ -127,6 +127,7 @@ class MainWindow(ctk.CTk):
             on_progress=self._on_progress,
             on_status=self._on_status,
             on_complete=self._on_complete,
+            playlist=self._playlist_var.get(),
         )
 
         cfg = {"format": fmt, "quality": quality, "save_folder": save_folder}

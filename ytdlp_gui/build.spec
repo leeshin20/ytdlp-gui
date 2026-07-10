@@ -3,7 +3,10 @@
 a = Analysis(
     ['app.py'],
     pathex=['/Users/yubeen/ytdlp_gui'],
-    binaries=[('/opt/homebrew/bin/ffmpeg', '.')],
+    binaries=[
+        ('/opt/homebrew/bin/ffmpeg', '.'),
+        ('/opt/homebrew/bin/ffprobe', '.'),
+    ],
     datas=[('/opt/miniconda3/lib/python3.12/site-packages/customtkinter', 'customtkinter')],
     hiddenimports=['customtkinter'],
     hookspath=[],
@@ -31,4 +34,5 @@ app = BUNDLE(
     coll,
     name='ytdlp-gui.app',
     bundle_identifier='com.ytdlp.gui',
+    codesign_identity='-',
 )

@@ -109,6 +109,10 @@ main() {
     echo 'Required executable is unavailable: /opt/homebrew/bin/ffmpeg' >&2
     exit 1
   }
+  [[ -x /opt/homebrew/bin/ffprobe ]] || {
+    echo 'Required executable is unavailable: /opt/homebrew/bin/ffprobe' >&2
+    exit 1
+  }
 
   rm -rf "$build_dir" "$dist_dir/ytdlp-gui" "$app_path"
   rm -f "$archive_path"

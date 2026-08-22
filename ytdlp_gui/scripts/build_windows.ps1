@@ -43,13 +43,19 @@ try {
         (Join-Path $appDir "ytdlp-gui.exe"),
         (Join-Path $appDir "ffmpeg.exe"),
         (Join-Path $appDir "ffprobe.exe"),
-        (Join-Path $appDir "deno.exe"),
-        (Join-Path $appDir "_internal\yt_dlp_ejs\yt\solver\core.min.js"),
-        (Join-Path $appDir "_internal\yt_dlp_ejs\yt\solver\lib.min.js")
+        (Join-Path $appDir "deno.exe")
     )
     foreach ($path in $requiredArtifacts) {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
             throw "Missing build artifact: $path"
+        }
+    }
+    foreach ($scriptName in @("core.min.js", "lib.min.js")) {
+        $ejsScript = Get-ChildItem -LiteralPath $appDir -Recurse -Filter $scriptName |
+            Where-Object { $_.FullName.Replace("\", "/") -match "/yt_dlp_ejs/yt/solver/[^/]+$" } |
+            Select-Object -First 1
+        if (-not $ejsScript) {
+            throw "Missing bundled yt-dlp-ejs script: $scriptName"
         }
     }
 
@@ -63,12 +69,15 @@ try {
             "ytdlp-gui/ytdlp-gui.exe",
             "ytdlp-gui/ffmpeg.exe",
             "ytdlp-gui/ffprobe.exe",
-            "ytdlp-gui/deno.exe",
-            "ytdlp-gui/_internal/yt_dlp_ejs/yt/solver/core.min.js",
-            "ytdlp-gui/_internal/yt_dlp_ejs/yt/solver/lib.min.js"
+            "ytdlp-gui/deno.exe"
         )) {
             if ($entryNames -notcontains $entry) {
                 throw "ZIP is missing required entry: $entry"
+            }
+        }
+        foreach ($scriptName in @("core.min.js", "lib.min.js")) {
+            if (-not ($entryNames -match "/yt_dlp_ejs/yt/solver/$([regex]::Escape($scriptName))$")) {
+                throw "ZIP is missing bundled yt-dlp-ejs script: $scriptName"
             }
         }
     }

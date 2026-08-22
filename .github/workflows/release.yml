@@ -32,7 +32,7 @@ jobs:
           cache-dependency-path: ytdlp_gui/requirements.txt
       - name: Install dependencies
         run: |
-          brew install ffmpeg
+          brew install ffmpeg deno
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt pyinstaller pytest
       - name: Run Python tests
@@ -67,6 +67,9 @@ jobs:
       - name: Prepare FFmpeg
         shell: pwsh
         run: .\scripts\prepare_ffmpeg_windows.ps1
+      - name: Prepare Deno
+        shell: pwsh
+        run: .\scripts\prepare_deno_windows.ps1
       - name: Run tests
         run: python -m pytest -q
       - name: Build Windows archive

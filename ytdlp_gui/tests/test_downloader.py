@@ -54,6 +54,32 @@ def test_frozen_windows_app_uses_bundled_ffmpeg(monkeypatch, tmp_path):
     assert downloader.get_ffmpeg_location() == str(ffmpeg)
 
 
+def test_frozen_macos_app_uses_bundled_deno(monkeypatch, tmp_path):
+    app = tmp_path / "ytdlp-gui.app"
+    executable = app / "Contents" / "MacOS" / "ytdlp-gui"
+    deno = app / "Contents" / "Frameworks" / "deno"
+    executable.parent.mkdir(parents=True)
+    deno.parent.mkdir(parents=True)
+    executable.write_bytes(b"binary")
+    deno.write_bytes(b"binary")
+    monkeypatch.setattr(downloader.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(downloader.sys, "_MEIPASS", str(tmp_path / "missing"), raising=False)
+    monkeypatch.setattr(downloader.sys, "executable", str(executable))
+    monkeypatch.setattr(downloader.sys, "platform", "darwin")
+
+    assert downloader.get_js_runtime_location() == str(deno)
+
+
+def test_frozen_windows_app_uses_bundled_deno(monkeypatch, tmp_path):
+    deno = tmp_path / "deno.exe"
+    deno.write_bytes(b"binary")
+    monkeypatch.setattr(downloader.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(downloader.sys, "_MEIPASS", str(tmp_path), raising=False)
+    monkeypatch.setattr(downloader.sys, "platform", "win32")
+
+    assert downloader.get_js_runtime_location() == str(deno)
+
+
 def test_ydl_options_pass_bundled_ffmpeg_location():
     options = downloader.build_ydl_options(
         "webm",
@@ -87,3 +113,21 @@ def test_long_filename_is_truncated_but_extension_is_kept():
 
     assert len(result) == 50
     assert result.endswith("...mp4")
+
+
+def test_long_status_message_is_bounded():
+    result = downloader.shorten_status("ERROR: " + "x" * 200, max_length=90)
+
+    assert len(result) == 90
+    assert result.endswith("...")
+
+
+def test_ydl_options_use_deno_when_available():
+    options = downloader.build_ydl_options(
+        "webm", "best", "/tmp/downloads", lambda _download: None, None,
+        js_runtime="/Applications/ytdlp-gui.app/Contents/Frameworks/deno",
+    )
+
+    assert options["js_runtimes"] == {
+        "deno": {"path": "/Applications/ytdlp-gui.app/Contents/Frameworks/deno"}
+    }

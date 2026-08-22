@@ -54,3 +54,12 @@ grep -q "(FFPROBE, '.')" "$repo_root/build.spec" || {
   echo 'build.spec must bundle ffprobe alongside ffmpeg' >&2
   exit 1
 }
+
+grep -q "(DENO, '.')" "$repo_root/build.spec" || {
+  echo 'build.spec must bundle deno for YouTube JavaScript challenges' >&2
+  exit 1
+}
+grep -q "yt_dlp_ejs" "$repo_root/build.spec" || {
+  echo 'build.spec must bundle yt-dlp-ejs' >&2
+  exit 1
+}

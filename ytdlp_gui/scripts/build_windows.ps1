@@ -11,13 +11,14 @@ $archivePath = Join-Path $distDir "ytdlp-gui-windows.zip"
 $specPath = Join-Path $projectRoot "build_windows.spec"
 $requiredBundledFiles = @(
     (Join-Path $projectRoot "third_party\ffmpeg.exe"),
-    (Join-Path $projectRoot "third_party\ffprobe.exe")
+    (Join-Path $projectRoot "third_party\ffprobe.exe"),
+    (Join-Path $projectRoot "third_party\deno.exe")
 )
 $buildSucceeded = $false
 
 foreach ($path in $requiredBundledFiles) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-        throw "Missing bundled binary: $path. Run scripts\prepare_ffmpeg_windows.ps1 first."
+        throw "Missing bundled binary: $path. Run scripts\prepare_ffmpeg_windows.ps1 and scripts\prepare_deno_windows.ps1 first."
     }
 }
 
@@ -41,7 +42,10 @@ try {
     $requiredArtifacts = @(
         (Join-Path $appDir "ytdlp-gui.exe"),
         (Join-Path $appDir "ffmpeg.exe"),
-        (Join-Path $appDir "ffprobe.exe")
+        (Join-Path $appDir "ffprobe.exe"),
+        (Join-Path $appDir "deno.exe"),
+        (Join-Path $appDir "_internal\yt_dlp_ejs\yt\solver\core.min.js"),
+        (Join-Path $appDir "_internal\yt_dlp_ejs\yt\solver\lib.min.js")
     )
     foreach ($path in $requiredArtifacts) {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
@@ -58,7 +62,10 @@ try {
         foreach ($entry in @(
             "ytdlp-gui/ytdlp-gui.exe",
             "ytdlp-gui/ffmpeg.exe",
-            "ytdlp-gui/ffprobe.exe"
+            "ytdlp-gui/ffprobe.exe",
+            "ytdlp-gui/deno.exe",
+            "ytdlp-gui/_internal/yt_dlp_ejs/yt/solver/core.min.js",
+            "ytdlp-gui/_internal/yt_dlp_ejs/yt/solver/lib.min.js"
         )) {
             if ($entryNames -notcontains $entry) {
                 throw "ZIP is missing required entry: $entry"

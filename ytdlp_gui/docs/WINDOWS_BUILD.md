@@ -5,10 +5,11 @@
 ## 현재 상태
 
 - 작업 브랜치: `leeshin20`
-- 최신 수정 커밋: `e3ee834`
+- 최신 코드는 `leeshin20` 브랜치에서 받습니다.
 - Mac 배포물은 `dist/ytdlp-gui-mac.zip`으로 생성됩니다.
 - Mac용 빌드 설정(`build.spec`)은 `/opt/homebrew/...` 경로와 `.app` 번들을 사용하므로 Windows에서 그대로 실행하면 안 됩니다.
 - Windows에서는 `ffmpeg.exe`와 `ffprobe.exe`를 함께 포함해야 합니다. 둘 중 하나라도 빠지면 yt-dlp의 병합 단계가 실패합니다.
+- 최신 YouTube 플레이리스트 지원을 위해 `yt-dlp-ejs`와 Deno도 함께 포함합니다.
 
 ## 1. Windows에서 프로젝트 받기
 
@@ -31,6 +32,8 @@ pip install -r requirements.txt
 pip install pyinstaller pytest
 ```
 
+현재 `requirements.txt`의 `yt-dlp[default]`가 `yt-dlp-ejs`를 설치합니다. Deno 실행 파일은 다음 단계의 준비 스크립트로 받습니다.
+
 PowerShell이 스크립트 실행을 막으면 현재 사용자에 대해서만 다음을 한 번 실행합니다.
 
 ```powershell
@@ -44,6 +47,7 @@ Windows용 `ffmpeg.exe`와 `ffprobe.exe`를 준비해 다음 위치에 둡니다
 ```text
 third_party/ffmpeg.exe
 third_party/ffprobe.exe
+third_party/deno.exe
 ```
 
 두 파일이 실제로 실행되는지 확인합니다.
@@ -51,6 +55,11 @@ third_party/ffprobe.exe
 ```powershell
 & .\third_party\ffmpeg.exe -version
 & .\third_party\ffprobe.exe -version
+& .\third_party\deno.exe --version
+
+# ffmpeg/ffprobe와 Deno를 자동으로 준비하려면
+.\scripts\prepare_ffmpeg_windows.ps1
+.\scripts\prepare_deno_windows.ps1
 ```
 
 ## 4. Windows용 PyInstaller spec 만들기
@@ -61,16 +70,21 @@ Mac용 `build.spec`를 수정하지 말고, 프로젝트 루트에 `build_window
 # build_windows.spec
 from pathlib import Path
 import customtkinter
+import yt_dlp_ejs
 
 ROOT = Path(__file__).resolve().parent
 FFMPEG = ROOT / "third_party" / "ffmpeg.exe"
 FFPROBE = ROOT / "third_party" / "ffprobe.exe"
+DENO = ROOT / "third_party" / "deno.exe"
 CTK_DIR = Path(customtkinter.__file__).resolve().parent
+EJS_DIR = Path(yt_dlp_ejs.__file__).resolve().parent
 
 if not FFMPEG.is_file():
     raise SystemExit(f"Missing bundled binary: {FFMPEG}")
 if not FFPROBE.is_file():
     raise SystemExit(f"Missing bundled binary: {FFPROBE}")
+if not DENO.is_file():
+    raise SystemExit(f"Missing bundled binary: {DENO}")
 
 a = Analysis(
     [str(ROOT / "app.py")],
@@ -78,9 +92,10 @@ a = Analysis(
     binaries=[
         (str(FFMPEG), "."),
         (str(FFPROBE), "."),
+        (str(DENO), "."),
     ],
-    datas=[(str(CTK_DIR), "customtkinter")],
-    hiddenimports=["customtkinter"],
+    datas=[(str(CTK_DIR), "customtkinter"), (str(EJS_DIR), "yt_dlp_ejs")],
+    hiddenimports=["customtkinter", "yt_dlp_ejs"],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
@@ -105,39 +120,12 @@ coll = COLLECT(
 )
 ```
 
-## 5. Windows 경로 처리 수정
+## 5. Windows 경로 처리 확인
 
-현재 `core/downloader.py`의 `get_ffmpeg_location()`은 Mac/Linux 이름인 `ffmpeg`만 찾습니다. Windows 빌드 전에 frozen 앱에서 `.exe`를 찾도록 수정해야 합니다.
-
-`if getattr(sys, "frozen", False):` 블록을 다음 형태로 바꿉니다.
-
-```python
-    if getattr(sys, "frozen", False):
-        executable_name = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
-        roots = [Path(getattr(sys, "_MEIPASS", ""))]
-        executable = getattr(sys, "executable", "")
-        if executable and sys.platform != "win32":
-            roots.append(Path(executable).resolve().parent.parent / "Frameworks")
-        for root in roots:
-            candidate = root / executable_name
-            if candidate.is_file():
-                return str(candidate)
-        return None
-```
-
-Windows용 테스트도 추가합니다.
-
-```python
-def test_frozen_windows_app_uses_bundled_ffmpeg(monkeypatch, tmp_path):
-    ffmpeg = tmp_path / "ffmpeg.exe"
-    ffmpeg.write_bytes(b"binary")
-    ffmpeg.chmod(0o755)
-    monkeypatch.setattr(downloader.sys, "frozen", True, raising=False)
-    monkeypatch.setattr(downloader.sys, "_MEIPASS", str(tmp_path), raising=False)
-    monkeypatch.setattr(downloader.sys, "platform", "win32")
-
-    assert downloader.get_ffmpeg_location() == str(ffmpeg)
-```
+`core/downloader.py`는 frozen Windows 앱에서 `ffmpeg.exe`와 `deno.exe`를
+PyInstaller의 번들 디렉터리에서 찾도록 구현되어 있습니다. 별도 코드 수정은
+필요하지 않습니다. `tests/test_downloader.py`의 Windows 경로 테스트가 이 동작을
+검증합니다.
 
 ## 6. 테스트 실행
 
@@ -160,6 +148,7 @@ pyinstaller --clean --noconfirm build_windows.spec
 dist/ytdlp-gui/ytdlp-gui.exe
 dist/ytdlp-gui/ffmpeg.exe
 dist/ytdlp-gui/ffprobe.exe
+dist/ytdlp-gui/deno.exe
 ```
 
 개발 PC에서 먼저 실행합니다.
@@ -175,7 +164,7 @@ Compress-Archive -Path .\dist\ytdlp-gui -DestinationPath .\dist\ytdlp-gui-window
 Get-FileHash .\dist\ytdlp-gui-windows.zip -Algorithm SHA256
 ```
 
-친구에게는 `dist/ytdlp-gui-windows.zip`을 보내고, 압축을 해제한 폴더 안의 `ytdlp-gui.exe`를 실행하도록 안내합니다. `.exe` 하나만 따로 보내면 `ffmpeg.exe`, `ffprobe.exe`가 빠져서 다시 오류가 납니다.
+친구에게는 `dist/ytdlp-gui-windows.zip`을 보내고, 압축을 해제한 폴더 안의 `ytdlp-gui.exe`를 실행하도록 안내합니다. `.exe` 하나만 따로 보내면 `ffmpeg.exe`, `ffprobe.exe`, `deno.exe`가 빠져서 YouTube 플레이리스트가 다시 실패할 수 있습니다.
 
 ## 9. Windows 보안 경고
 
@@ -184,6 +173,7 @@ Get-FileHash .\dist\ytdlp-gui-windows.zip -Algorithm SHA256
 ## 문제 해결 체크리스트
 
 - `ffmpeg.exe`와 `ffprobe.exe`가 `dist/ytdlp-gui` 폴더에 모두 있는가?
+- `deno.exe`가 `dist/ytdlp-gui` 폴더에 있는가?
 - 친구에게 ZIP 전체를 보냈고, EXE만 따로 보내지 않았는가?
 - `core/downloader.py`가 Windows에서 `ffmpeg.exe`를 찾도록 수정되었는가?
 - `python -m pytest -q`가 통과하는가?

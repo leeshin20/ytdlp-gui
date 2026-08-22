@@ -30,6 +30,13 @@ def shorten_filename(filename: str, max_length: int = 50) -> str:
     return name[:prefix_length] + marker + suffix
 
 
+def shorten_status(text: str, max_length: int = 90) -> str:
+    text = str(text)
+    if len(text) <= max_length:
+        return text
+    return text[: max_length - 3] + "..."
+
+
 def build_format_string(fmt: str, quality: str) -> str:
     q = QUALITY_FILTER.get(quality, "")
     if fmt == "mp4":
@@ -61,6 +68,21 @@ def get_ffmpeg_location() -> str | None:
     return shutil.which("ffmpeg")
 
 
+def get_js_runtime_location() -> str | None:
+    executable_name = "deno.exe" if sys.platform == "win32" else "deno"
+    if getattr(sys, "frozen", False):
+        roots = [Path(getattr(sys, "_MEIPASS", ""))]
+        executable = getattr(sys, "executable", "")
+        if executable and sys.platform != "win32":
+            roots.append(Path(executable).resolve().parent.parent / "Frameworks")
+        for root in roots:
+            candidate = root / executable_name
+            if candidate.is_file():
+                return str(candidate)
+        return None
+    return shutil.which("deno")
+
+
 def build_ydl_options(
     fmt: str,
     quality: str,
@@ -68,6 +90,7 @@ def build_ydl_options(
     progress_hook,
     ffmpeg_location: str | None,
     playlist: bool = True,
+    js_runtime: str | None = None,
 ) -> dict:
     options = {
         "format": build_format_string(fmt, quality),
@@ -79,6 +102,8 @@ def build_ydl_options(
     }
     if ffmpeg_location:
         options["ffmpeg_location"] = ffmpeg_location
+    if js_runtime:
+        options["js_runtimes"] = {"deno": {"path": js_runtime}}
     if fmt == "mp3":
         options["postprocessors"] = [
             {"key": "FFmpegExtractAudio", "preferredcodec": "mp3"}
@@ -119,6 +144,7 @@ class Downloader:
             self._make_hook(on_progress, on_status),
             get_ffmpeg_location(),
             playlist=playlist,
+            js_runtime=get_js_runtime_location(),
         )
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

@@ -106,12 +106,16 @@ main() {
   require_command ditto
   require_command ffmpeg
   require_command ffprobe
+  require_command deno
   require_command shasum
 
   rm -rf "$build_dir" "$dist_dir/ytdlp-gui" "$app_path"
   rm -f "$archive_path"
 
-  "$pyinstaller_bin" --noconfirm "$project_root/build.spec"
+  "$pyinstaller_bin" --clean --noconfirm --log-level WARN "$project_root/build.spec"
+  test -x "$app_path/Contents/Frameworks/deno"
+  test -f "$app_path/Contents/Resources/yt_dlp_ejs/yt/solver/core.min.js"
+  test -f "$app_path/Contents/Resources/yt_dlp_ejs/yt/solver/lib.min.js"
   sanitize_app "$app_path"
   codesign --force --deep --sign - "$app_path"
   codesign --verify --deep --strict "$app_path"
